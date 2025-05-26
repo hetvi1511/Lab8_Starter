@@ -54,6 +54,13 @@ function initializeServiceWorker() {
   // B5. TODO - In the event that the service worker registration fails, console
   //            log that it has failed.
   // STEPS B6 ONWARDS WILL BE IN /sw.js
+  if ('serviceworker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('ServiceWorker registered:', reg))
+      .catch(err => console.error('SW registration failed:', err));
+    });
+  }
 }
 
 /**
@@ -100,6 +107,53 @@ async function getRecipes() {
   //            resolve() method.
   // A10. TODO - Log any errors from catch using console.error
   // A11. TODO - Pass any errors to the Promise's reject() function
+
+  // A1
+  const stored = localStorage.getItem('recipes');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length === RECIPE_URLS.length) {
+        return parsed;
+      }
+      else {
+        localStorage.removeItem('recipes');
+      }
+    } catch (e) {
+      console.error('Error parsing stored recipes:', e);
+      localStorage.removeItem('recipes');
+    }
+  }
+
+  // A2
+  const recipes = [];
+
+  // A3
+  return new Promise(async (resolve, reject) => {
+    // A4
+    for (const url of RECIPE_URLS) {
+      // A5
+      try {
+        // A6
+        const response = await fetch(url);
+        // A7
+        const data = await response.json();
+        // A8
+        recipes.push(data);
+        // A9
+        if (recipes.length === RECIPE_URLS.length) {
+          saveRecipesToStorage(recipes);
+          resolve(recipes);
+        }
+      }
+      catch (error) {
+        // A10
+        console.error(`Error fetching recipe at ${url}:`, error);
+        // A11
+        reject(error);
+      }
+    }
+  });
 }
 
 /**
